@@ -1,10 +1,9 @@
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
-import scipy.optimize
 
 class Linkage():
-    def __init__(self, wheelDia, frontWheelPos, cgHeight, bbPos, shock, fourBar = None, link = None):
+    def __init__(self, wheelDia, frontWheelPos, cgHeight, bbPos, shock, fourBar = None, link = None, mainPivot = None):
         self.wheelDia = wheelDia
         self.frontWheelPos = frontWheelPos
         self.cgHeight = cgHeight
@@ -18,6 +17,8 @@ class Linkage():
         if link is not None: #for single pivots
             self.singlePivot = True
             self.singlePivotLink = link
+            self.mainPivot = mainPivot
+
 
     def solveLinkage(self, linkNum, angleIncrement): #link num is which link to sweep through angle range
         #angle increment is signed, + for ccw, - for cw
@@ -47,6 +48,24 @@ class Linkage():
                 self.fourBar.links[0].rotate(angleIncrement)
                 
                 if np.linalg.norm(self.fourBar.getShockPt() - self.shock.fixedPt) <= self.shock.length - self.shock.travel: #break when shock has reached max travel
+                    break
+        else:
+            self.wheelPts = np.array(np.atleast_2d(self.singlePivotLink.getWheelVector().flatten() + self.mainPivot))
+            self.wheelTravel = np.array([0])
+            self.shockPts = np.array(np.atleast_2d(self.singlePivotLink.getShockVector().flatten() + self.mainPivot))
+            self.instantCenter = np.array(np.atleast_2d(self.mainPivot))
+            self.singlePivotLink.rotate(angleIncrement)
+          
+            while True:
+                currentWheelPt = self.singlePivotLink.getWheelVector().flatten() + self.mainPivot
+                self.wheelPts = np.append(self.wheelPts, np.atleast_2d(currentWheelPt), axis=0)
+                self.wheelTravel = np.append(self.wheelTravel, currentWheelPt[1] - self.wheelPts[0][1])
+                self.shockPts = np.append(self.shockPts, np.atleast_2d(self.singlePivotLink.getShockVector().flatten() + self.mainPivot), axis=0)
+                self.instantCenter = np.append(self.instantCenter, np.atleast_2d(self.mainPivot), axis=0)
+
+                self.singlePivotLink.rotate(angleIncrement)
+
+                if np.linalg.norm(self.shockPts[len(self.shockPts)-1] - self.shock.fixedPt) <= self.shock.length - self.shock.travel: #break when shock has reached max travel
                     break
 
     def plotLinkage(self):
@@ -98,7 +117,7 @@ class Linkage():
         axes.set_title("Anti-Rise")
         axes.set_xlabel("Wheel Travel (mm)")
         axes.set_ylabel("Anti Rise %")
-        axes.margins(0, 2)
+        axes.margins(0, 0.2)
         axes.set_ybound(0)
         
     def calculateAntiRise(self, wheelPos, instantCenter):
