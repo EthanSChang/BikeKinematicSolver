@@ -117,7 +117,7 @@ class Linkage():
         axes.set_title("Anti-Rise")
         axes.set_xlabel("Wheel Travel (mm)")
         axes.set_ylabel("Anti Rise %")
-        axes.margins(0, 0.2)
+        axes.margins(0, 0.8)
         axes.set_ybound(0)
         
     def calculateAntiRise(self, wheelPos, instantCenter):
